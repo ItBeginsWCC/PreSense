@@ -1,0 +1,123 @@
+:root {
+  --primary-bg: #f8fafc;
+  --card-bg: #ffffff;
+  --text-main: #1e293b;
+  --accent-color: #ef4444; /* Emergency Red */
+  --safe-color: #10b981; /* Calming Green */
+  --urgent-color: #f59e0b; /* Warning Amber */
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--primary-bg);
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.view-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.card {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+button {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+button:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+/* Dispatch View */
+.dispatch-view h1 { color: var(--text-main); }
+.incident-links a { display: block; margin: 0.5rem 0; color: var(--safe-color); text-decoration: none; font-weight: 600; }
+
+/* Caller View */
+.caller-view .status-badge {
+  background: #dcfce7;
+  color: var(--safe-color);
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  display: inline-block;
+}
+
+.caller-view .question-card {
+  background: #f1f5f9;
+  border-left: 4px solid var(--safe-color);
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+}
+
+.caller-view h3 { margin: 0; font-size: 1.25rem; }
+
+.caller-view .history { margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+.msg { margin-bottom: 0.5rem; padding: 0.5rem; border-radius: 0.5rem; }
+.msg.ai { background: #f1f5f9; }
+.msg.user { background: #dcfce7; text-align: right; }
+
+/* EMT View */
+.emt-view { max-width: 1000px; }
+.emt-view h1 { margin-bottom: 0; }
+.triage-banner {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-weight: 800;
+  font-size: 1.5rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.triage-banner.CRITICAL { background: #fee2e2; color: #b91c1c; border: 4px solid #b91c1c; animation: pulse 2s infinite; }
+.triage-banner.URGENT { background: #fef3c7; color: #b45309; }
+.triage-banner.STABLE { background: #dcfce7; color: #15803d; }
+
+.emt-view .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+
+.log-entries {
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: monospace;
+}
+
+.log-entry { margin-bottom: 0.5rem; padding: 0.5rem; border-bottom: 1px solid #f1f5f9; }
+.log-entry.user { color: #1e293b; }
+.log-entry.ai { color: #3b82f6; }
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
