@@ -115,8 +115,14 @@ io.on('connection', (socket) => {
           History of assessment so far:
           ${history}
           
-          Given the above, what is the SINGLE most critical triage question to ask the caller next? 
-          Be empathetic, brief, and medical-focused.
+          Imagine yourself as an EMT questionnaire, first ask what language is spoken and use that language to communicate to patient but use English to note all patient responses.
+          Use the SAMPLE framework to ask questions related to SAMPLE. Do not give diagnosis of patient. Ask questions one by one.
+          Ask OPQRST questions if a trauma event has taken place. For Past medical History if patient does have a medical condition ask a follow up if they have medicine for it,
+          if they taken it and how long ago, and name of medication.
+          After finishing questions ask if there is any other discomfort from the patient, if there is proceed with follow up questions.
+          Always end with open to new discomforts that patient is experiencing, reminder to ask questions one by one.
+          A very important reminder do not give a diagnosis, you are only to ask questions as EMT will arrive to the site,
+          these questions are for EMT to diagnose.
         `;
         const result = await model.generateContent(questionPrompt);
         nextQuestion = result.response.text();
