@@ -71,7 +71,7 @@ npm run dev
 
 - **Frontend:** React, TypeScript, Vite, Socket.io-client.
 - **Backend:** Node.js, Express, Socket.io, Google Generative AI SDK.
-- **AI:** Google Gemini 2.5 Flash.
+- **AI:** Google Gemma 3 4B (Instruction Tuned).
 
 ## 🛡 Security Note
 The `.env` file is included in `.gitignore` to prevent sensitive API keys from being leaked to GitHub. Always keep your keys private.

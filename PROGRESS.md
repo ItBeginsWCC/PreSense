@@ -30,7 +30,7 @@ PreSense is an emergency support module designed to bridge the care gap between 
 ## 🛠 Technical Configuration
 - **Backend Port:** 3001
 - **Frontend Port:** 5173 (with Proxy to 3001)
-- **Model:** Live Integration with `gemini-2.5-flash` (with Mock AI fallback)
+- **Model:** Testing with `gemma-3-4b-it` (on `test-gemma-model` branch)
 
 ## 🚀 Future Roadmap
 1.  **Context Optimization:** Further refine AI memory to handle complex medical histories.

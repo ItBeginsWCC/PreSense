@@ -90,14 +90,43 @@ input, textarea {
 
 /* EMT View */
 .emt-view { max-width: 1000px; }
-.emt-view h1 { margin-bottom: 0; }
+.emt-view .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; }
+.header-actions { text-align: right; }
+.arrival-btn { background: #b91c1c; font-size: 1.1rem; padding: 1rem 2rem; box-shadow: 0 4px 0 #7f1d1d; }
+.arrival-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #7f1d1d; }
+.resolved-badge { background: #1e293b; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: bold; margin-bottom: 1rem; display: inline-block; }
+
 .triage-banner {
-  padding: 1rem;
+  padding: 0.5rem 1.5rem;
   border-radius: 0.5rem;
   font-weight: 800;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   text-align: center;
-  margin: 1rem 0;
+  margin-top: 0.5rem;
+}
+
+/* Resolved States */
+.caller-view.resolved {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+}
+
+.success-card {
+  text-align: center;
+  padding: 3rem;
+  border: 4px solid var(--safe-color);
+}
+
+.success-card .icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.success-card h1 {
+  color: var(--safe-color);
+  margin-bottom: 1rem;
 }
 
 .triage-banner.CRITICAL { background: #fee2e2; color: #b91c1c; border: 4px solid #b91c1c; animation: pulse 2s infinite; }
