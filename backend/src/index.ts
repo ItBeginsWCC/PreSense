@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 
@@ -19,8 +19,9 @@ const io = new Server(httpServer, {
   }
 });
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'MOCK_KEY');
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || 'MOCK_KEY',
+});
 
 // Mock AI Fallback for testing without an API key
 const getMockResponse = (type: 'question' | 'summary', incident?: Incident) => {
@@ -103,6 +104,7 @@ io.on('connection', (socket) => {
     const hasApiKey = process.env.GEMINI_API_KEY && 
                       process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here' &&
                       process.env.GEMINI_API_KEY.length > 10;
+    console.log('Using real AI:', !!hasApiKey)
 
     // 1. Generate NEXT question
     try {
@@ -124,12 +126,18 @@ io.on('connection', (socket) => {
           A very important reminder do not give a diagnosis, you are only to ask questions as EMT will arrive to the site,
           these questions are for EMT to diagnose.
         `;
-        const result = await model.generateContent(questionPrompt);
-        nextQuestion = result.response.text();
+        const result = await ai.models.generateContent({
+  model: "gemini-2.5-flash",
+  contents: questionPrompt,
+});
+
+nextQuestion = result.text || "";
       } else {
         nextQuestion = getMockResponse('question', incident);
       }
       
+      nextQuestion = nextQuestion.replace(/^AI:\s*/i, '').trim();
+
       incident.questions.push({ role: 'ai', text: nextQuestion });
       io.to(id).emit('next-question', nextQuestion);
     } catch (error) {
@@ -156,11 +164,15 @@ io.on('connection', (socket) => {
           
           Return ONLY the JSON.
         `;
-        const summaryResult = await model.generateContent(summaryPrompt);
-        summaryText = summaryResult.response.text().replace(/```json|```/g, '').trim();
-      } else {
-        summaryText = getMockResponse('summary');
-      }
+        const summaryResult = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: summaryPrompt,
+    });
+
+    summaryText = (summaryResult.text || "").replace(/```json|```/g, '').trim();
+  } else {
+    summaryText = getMockResponse('summary');
+  }
 
       const parsedSummary = JSON.parse(summaryText);
       incident.summary = parsedSummary;
