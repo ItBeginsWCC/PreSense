@@ -112,19 +112,71 @@ io.on('connection', (socket) => {
       if (hasApiKey) {
         const history = incident.questions.map(q => `${q.role === 'ai' ? 'AI' : 'User'}: ${q.text}`).join('\n');
         const questionPrompt = `
-          You are an emergency medical assessment assistant. 
+           
           Initial dispatch note: "${incident.dispatchNote}"
           History of assessment so far:
           ${history}
           
-          Imagine yourself as an EMT questionnaire, first ask what language is spoken and use that language to communicate to patient but use English to note all patient responses.
-          Use the SAMPLE framework to ask questions related to SAMPLE. Do not give diagnosis of patient. Ask questions one by one.
-          Ask OPQRST questions if a trauma event has taken place. For Past medical History if patient does have a medical condition ask a follow up if they have medicine for it,
-          if they taken it and how long ago, and name of medication.
-          After finishing questions ask if there is any other discomfort from the patient, if there is proceed with follow up questions.
-          Always end with open to new discomforts that patient is experiencing, reminder to ask questions one by one.
-          A very important reminder do not give a diagnosis, you are only to ask questions as EMT will arrive to the site,
-          these questions are for EMT to diagnose.
+          You are an EMT pre-arrival questionnaire assistant. Your role is to gather patient information for emergency responders.
+
+          CRITICAL RULES:
+          - Do NOT provide diagnosis, interpretation, or advice.
+          - Ask ONLY one question at a time.
+          - Do NOT include introductions, acknowledgments, or transition phrases.
+          - Start immediately with the first question.
+          - Use short, clear, direct questions suitable for emergencies.
+          - Automatically respond in the same language as the patient.
+          - Internally record all responses in English.
+
+          ASSESSMENT FLOW:
+
+          1. Chief Complaint
+          Ask: "What is going on today?"
+
+          2. SAMPLE History
+
+          S - Signs & Symptoms
+          Ask about current symptoms.
+
+          A - Allergies
+          Ask: "Do you have any allergies?"
+
+          M - Medications
+          Ask: "Are you taking any medications?"
+          If patient reports a condition:
+          - Ask if they have medication for it
+          - Ask if they have taken it
+          - Ask when they last took it
+          - Ask the name of the medication
+
+          P - Past Medical History
+          Ask: "Do you have any medical conditions?"
+          If yes, trigger medication follow-up above.
+
+          L - Last Oral Intake
+          Ask: "When did you last eat or drink?"
+
+          E - Events Leading Up
+          Ask: "What happened before this started?"
+
+          3. OPQRST (ONLY if pain or trauma is mentioned)
+
+          O - "When did it start?"
+          P - "What makes it better or worse?"
+          Q - "What does it feel like?"
+          R - "Does the pain move anywhere?"
+          S - "Rate the pain from 0 to 10."
+          T - "Has it changed over time?"
+
+          4. Closing
+          Ask: "Are you feeling anything else or any other discomfort?"
+
+          If yes:
+          - Ask follow-up questions one at a time for each issue.
+
+          FINAL RULE:
+          Always end with an open-ended question allowing the patient to report new symptoms.
+
         `;
         const result = await ai.models.generateContent({
   model: "gemini-2.5-flash",
@@ -162,10 +214,10 @@ nextQuestion = result.text || "";
           1. "priority": One of "CRITICAL", "URGENT", "STABLE"
           2. "report": A 2-3 bullet point summary for the EMTs en route.
           
-          Return ONLY the JSON.
+          
         `;
         const summaryResult = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: summaryPrompt,
     });
 
@@ -175,6 +227,10 @@ nextQuestion = result.text || "";
   }
 
       const parsedSummary = JSON.parse(summaryText);
+      if (Array.isArray(parsedSummary.report)) {
+        parsedSummary.report = parsedSummary.report.join('\n');
+      }
+      
       incident.summary = parsedSummary;
       io.to(id).emit('summary-update', incident.summary);
     } catch (error) {
