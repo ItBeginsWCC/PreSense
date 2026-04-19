@@ -214,10 +214,10 @@ nextQuestion = result.text || "";
           1. "priority": One of "CRITICAL", "URGENT", "STABLE"
           2. "report": A 2-3 bullet point summary for the EMTs en route.
           
-          Return ONLY the JSON.
+          
         `;
         const summaryResult = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: summaryPrompt,
     });
 
@@ -227,6 +227,10 @@ nextQuestion = result.text || "";
   }
 
       const parsedSummary = JSON.parse(summaryText);
+      if (Array.isArray(parsedSummary.report)) {
+        parsedSummary.report = parsedSummary.report.join('\n');
+      }
+      
       incident.summary = parsedSummary;
       io.to(id).emit('summary-update', incident.summary);
     } catch (error) {
