@@ -7,6 +7,7 @@ const socket = io();
 const EmtView = () => {
   const { id } = useParams();
   const [incident, setIncident] = useState<any>(null);
+  const [isResolving, setIsResolving] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -22,12 +23,26 @@ const EmtView = () => {
           summary
         }));
       });
+
+      socket.on('incident-resolved', () => {
+        setIncident((prev: any) => ({
+          ...prev,
+          status: 'resolved'
+        }));
+        setIsResolving(false);
+      });
     }
 
     return () => {
       socket.off('summary-update');
+      socket.off('incident-resolved');
     };
   }, [id]);
+
+  const handleEmtArrived = () => {
+    setIsResolving(true);
+    socket.emit('resolve-incident', id);
+  };
 
   if (!incident) return <div>Loading EMT Dashboard...</div>;
 
@@ -35,8 +50,21 @@ const EmtView = () => {
     <div className="view-container emt-view">
       <div className="header">
         <h1>EMT RESPONDER DASHBOARD</h1>
-        <div className={`triage-banner ${incident.summary?.priority || 'UNKNOWN'}`}>
-          PRIORITY: {incident.summary?.priority || 'UNKNOWN'}
+        <div className="header-actions">
+          {incident.status === 'active' ? (
+            <button 
+              className="arrival-btn" 
+              onClick={handleEmtArrived}
+              disabled={isResolving}
+            >
+              {isResolving ? 'GENERATING HANDOFF...' : '🚨 EMT ARRIVED'}
+            </button>
+          ) : (
+            <span className="resolved-badge">INCIDENT RESOLVED - CARE TRANSFERRED</span>
+          )}
+          <div className={`triage-banner ${incident.summary?.priority || 'UNKNOWN'}`}>
+            PRIORITY: {incident.summary?.priority || 'UNKNOWN'}
+          </div>
         </div>
       </div>
 

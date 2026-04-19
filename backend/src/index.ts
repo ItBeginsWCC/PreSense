@@ -20,7 +20,7 @@ const io = new Server(httpServer, {
 });
 
 // Configure for Google AI Studio (Generative AI)
-// Using gemini-2.5-flash based on user's quota
+// Using gemma-3-4b-it for testing on the new branch
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'MOCK_KEY');
 
 // Mock AI Fallback for testing without an API key
@@ -108,39 +108,39 @@ io.on('connection', (socket) => {
     try {
       let nextQuestion = "";
       if (hasApiKey) {
-        // Primary: 2.5 Flash
-        const modelName = "gemini-2.5-flash";
+        // Primary: Gemma 3 4B
+        const modelName = "gemma-3-4b-it";
         const model = genAI.getGenerativeModel({ model: modelName });
         const history = incident.questions.map(q => `${q.role === 'ai' ? 'AI' : 'User'}: ${q.text}`).join('\n');
         
         const questionPrompt = `
-          You are an EMT pre-arrival questionnaire assistant. Your role is to gather patient information for emergency responders.
+          You are a professional EMT Dispatcher performing a pre-arrival medical assessment.
+          Your goal is to gather specific clinical data for the responding ambulance crew using the SAMPLE and OPQRST frameworks.
 
           CONTEXT:
-          Initial dispatch note (the user's first input): "${incident.dispatchNote}"
-          Assessment history so far:
+          Initial Dispatch: "${incident.dispatchNote}"
+          Assessment History:
           ${history}
 
-          CRITICAL RULES:
-          1. ANALYZE the initial dispatch note. If it already contains the "Chief Complaint" (e.g., "My chest hurts"), do NOT ask "What is going on today?". Instead, acknowledge it briefly and move to the next logical question.
-          2. Ask ONLY one question at a time.
-          3. Do NOT provide diagnosis, interpretation, or advice.
-          4. Do NOT include introductions, acknowledgments, or transition phrases.
-          5. Use short, clear, direct questions.
-          6. Automatically respond in the same language as the patient.
+          CRITICAL MEDICAL RULES:
+          1. DO NOT ask general questions like "tell me more about the accident" or "what happened?".
+          2. Focus strictly on the PATIENT'S condition.
+          3. If the chief complaint is known, move immediately to Signs & Symptoms or OPQRST.
+          4. Ask ONLY one question at a time.
+          5. Use clinical, direct, and professional EMT tone.
+          6. No "fluff", no introductions, no "I'm sorry to hear that".
 
-          ASSESSMENT FLOW (Skip steps if already answered in dispatch or history):
-          1. Chief Complaint (If not in dispatch note)
-          2. Signs & Symptoms
+          STRICT ASSESSMENT PRIORITY:
+          1. Chief Complaint (if not clearly defined in dispatch)
+          2. Signs & Symptoms (What do they feel right now?)
           3. Allergies
-          4. Medications
-          5. Past Medical History
+          4. Medications (Are they on any?)
+          5. Past Medical History (Heart, Lung, Diabetes?)
           6. Last Oral Intake
-          7. Events Leading Up
-          8. OPQRST (If pain/trauma mentioned)
+          7. Events leading up
+          8. OPQRST (Onset, Provocation, Quality, Radiation, Severity, Time) - if pain/trauma.
 
-          GOAL:
-          Generate the single best next question to help the EMTs.
+          GOAL: Generate the next clinical question.
         `;
 
         const result = await model.generateContent(questionPrompt);
@@ -163,7 +163,7 @@ io.on('connection', (socket) => {
     try {
       let summaryText = "";
       if (hasApiKey) {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemma-3-4b-it" });
         const history = incident.questions.map(q => `${q.role === 'ai' ? 'AI' : 'User'}: ${q.text}`).join('\n');
         const summaryPrompt = `
           As a medical dispatcher, analyze this emergency transcript:
@@ -198,6 +198,54 @@ io.on('connection', (socket) => {
       io.to(id).emit('summary-update', incident.summary);
     } catch (error) {
       console.error('Error generating summary:', error);
+    }
+  });
+
+  socket.on('resolve-incident', async (id: string) => {
+    const incident = incidents[id];
+    if (!incident) return;
+
+    incident.status = 'resolved';
+    
+    // Generate FINAL comprehensive report
+    try {
+      const hasApiKey = process.env.GEMINI_API_KEY && 
+                        process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here' &&
+                        process.env.GEMINI_API_KEY.length > 10;
+      
+      let finalSummary = "";
+      if (hasApiKey) {
+        const model = genAI.getGenerativeModel({ model: "gemma-3-4b-it" });
+        const history = incident.questions.map(q => `${q.role === 'ai' ? 'AI' : 'User'}: ${q.text}`).join('\n');
+        const finalPrompt = `
+          ACT AS AN EMT OFFICER. Provide a FINAL PATIENT HANDOFF REPORT.
+          
+          Transcript:
+          ${history}
+          
+          Format as JSON:
+          {
+            "priority": "CRITICAL/URGENT/STABLE",
+            "report": "A concise professional handoff summary (3-5 bullet points)."
+          }
+        `;
+        const result = await model.generateContent(finalPrompt);
+        finalSummary = result.response.text().replace(/```json|```/g, '').trim();
+      } else {
+        finalSummary = JSON.stringify({
+          priority: incident.summary.priority,
+          report: "FINAL REPORT: " + incident.summary.report + "\n- EMTs have arrived on scene.\n- Care transferred."
+        });
+      }
+
+      const parsed = JSON.parse(finalSummary);
+      if (Array.isArray(parsed.report)) parsed.report = parsed.report.join('\n');
+      
+      incident.summary = parsed;
+      io.to(id).emit('summary-update', incident.summary);
+      io.to(id).emit('incident-resolved');
+    } catch (err) {
+      console.error('Error resolving incident:', err);
     }
   });
 });

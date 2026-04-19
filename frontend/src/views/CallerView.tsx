@@ -32,16 +32,24 @@ const CallerView = () => {
         }));
         setLoading(false);
       });
+
+      socket.on('incident-resolved', () => {
+        setIncident((prev: any) => ({
+          ...prev,
+          status: 'resolved'
+        }));
+      });
     }
 
     return () => {
       socket.off('next-question');
+      socket.off('incident-resolved');
     };
   }, [id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!answer.trim()) return;
+    if (!answer.trim() || incident?.status === 'resolved') return;
 
     setLoading(true);
     socket.emit('submit-answer', { id, answer });
@@ -53,6 +61,20 @@ const CallerView = () => {
   };
 
   if (!incident) return <div>Loading assessment...</div>;
+
+  if (incident.status === 'resolved') {
+    return (
+      <div className="view-container caller-view resolved">
+        <div className="card success-card">
+          <div className="icon">🚨</div>
+          <h1>Help is Here</h1>
+          <p>The EMTs have arrived at your location.</p>
+          <p>Please follow their instructions and stay safe.</p>
+          <button onClick={() => window.location.reload()}>Close Session</button>
+        </div>
+      </div>
+    );
+  }
 
   const currentQuestion = incident.questions.filter((q: any) => q.role === 'ai').slice(-1)[0];
 
