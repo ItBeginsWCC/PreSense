@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 
@@ -19,9 +19,9 @@ const io = new Server(httpServer, {
   }
 });
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || 'MOCK_KEY',
-});
+// Configure for Google AI Studio (Generative AI)
+// Using gemini-2.5-flash based on user's quota
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'MOCK_KEY');
 
 // Mock AI Fallback for testing without an API key
 const getMockResponse = (type: 'question' | 'summary', incident?: Incident) => {
@@ -33,7 +33,6 @@ const getMockResponse = (type: 'question' | 'summary', incident?: Incident) => {
       "Do they have a history of heart conditions or diabetes?",
       "Are they currently taking any prescription medications?"
     ];
-    // Return a question based on history length to simulate progress
     const index = Math.min((incident?.questions.length || 0) / 2, mockQuestions.length - 1);
     return mockQuestions[Math.floor(index)] + " (Mock AI)";
   } else {
@@ -98,7 +97,6 @@ io.on('connection', (socket) => {
     const incident = incidents[id];
     if (!incident) return;
 
-    // Add user answer to history
     incident.questions.push({ role: 'user', text: answer });
 
     const hasApiKey = process.env.GEMINI_API_KEY && 
@@ -110,34 +108,48 @@ io.on('connection', (socket) => {
     try {
       let nextQuestion = "";
       if (hasApiKey) {
+        // Primary: 2.5 Flash
+        const modelName = "gemini-2.5-flash";
+        const model = genAI.getGenerativeModel({ model: modelName });
         const history = incident.questions.map(q => `${q.role === 'ai' ? 'AI' : 'User'}: ${q.text}`).join('\n');
+        
         const questionPrompt = `
-          You are an emergency medical assessment assistant. 
-          Initial dispatch note: "${incident.dispatchNote}"
-          History of assessment so far:
-          ${history}
-          
-          Imagine yourself as an EMT questionnaire, first ask what language is spoken and use that language to communicate to patient but use English to note all patient responses.
-          Use the SAMPLE framework to ask questions related to SAMPLE. Do not give diagnosis of patient. Ask questions one by one.
-          Ask OPQRST questions if a trauma event has taken place. For Past medical History if patient does have a medical condition ask a follow up if they have medicine for it,
-          if they taken it and how long ago, and name of medication.
-          After finishing questions ask if there is any other discomfort from the patient, if there is proceed with follow up questions.
-          Always end with open to new discomforts that patient is experiencing, reminder to ask questions one by one.
-          A very important reminder do not give a diagnosis, you are only to ask questions as EMT will arrive to the site,
-          these questions are for EMT to diagnose.
-        `;
-        const result = await ai.models.generateContent({
-  model: "gemini-2.5-flash",
-  contents: questionPrompt,
-});
+          You are an EMT pre-arrival questionnaire assistant. Your role is to gather patient information for emergency responders.
 
-nextQuestion = result.text || "";
+          CONTEXT:
+          Initial dispatch note (the user's first input): "${incident.dispatchNote}"
+          Assessment history so far:
+          ${history}
+
+          CRITICAL RULES:
+          1. ANALYZE the initial dispatch note. If it already contains the "Chief Complaint" (e.g., "My chest hurts"), do NOT ask "What is going on today?". Instead, acknowledge it briefly and move to the next logical question.
+          2. Ask ONLY one question at a time.
+          3. Do NOT provide diagnosis, interpretation, or advice.
+          4. Do NOT include introductions, acknowledgments, or transition phrases.
+          5. Use short, clear, direct questions.
+          6. Automatically respond in the same language as the patient.
+
+          ASSESSMENT FLOW (Skip steps if already answered in dispatch or history):
+          1. Chief Complaint (If not in dispatch note)
+          2. Signs & Symptoms
+          3. Allergies
+          4. Medications
+          5. Past Medical History
+          6. Last Oral Intake
+          7. Events Leading Up
+          8. OPQRST (If pain/trauma mentioned)
+
+          GOAL:
+          Generate the single best next question to help the EMTs.
+        `;
+
+        const result = await model.generateContent(questionPrompt);
+        nextQuestion = result.response.text();
       } else {
         nextQuestion = getMockResponse('question', incident);
       }
       
       nextQuestion = nextQuestion.replace(/^AI:\s*/i, '').trim();
-
       incident.questions.push({ role: 'ai', text: nextQuestion });
       io.to(id).emit('next-question', nextQuestion);
     } catch (error) {
@@ -151,6 +163,7 @@ nextQuestion = result.text || "";
     try {
       let summaryText = "";
       if (hasApiKey) {
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const history = incident.questions.map(q => `${q.role === 'ai' ? 'AI' : 'User'}: ${q.text}`).join('\n');
         const summaryPrompt = `
           As a medical dispatcher, analyze this emergency transcript:
@@ -164,17 +177,23 @@ nextQuestion = result.text || "";
           
           Return ONLY the JSON.
         `;
-        const summaryResult = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: summaryPrompt,
-    });
-
-    summaryText = (summaryResult.text || "").replace(/```json|```/g, '').trim();
-  } else {
-    summaryText = getMockResponse('summary');
-  }
+        const result = await model.generateContent(summaryPrompt);
+        summaryText = result.response.text().replace(/```json|```/g, '').trim();
+        console.log('Generated Summary Text:', summaryText);
+      } else {
+        summaryText = getMockResponse('summary');
+      }
 
       const parsedSummary = JSON.parse(summaryText);
+      console.log('Parsed Summary:', parsedSummary);
+      
+      // Ensure report is a string for the frontend (split('\n') support)
+      if (Array.isArray(parsedSummary.report)) {
+        parsedSummary.report = parsedSummary.report.join('\n');
+      } else if (typeof parsedSummary.report !== 'string') {
+        parsedSummary.report = String(parsedSummary.report || '');
+      }
+
       incident.summary = parsedSummary;
       io.to(id).emit('summary-update', incident.summary);
     } catch (error) {
