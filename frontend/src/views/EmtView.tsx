@@ -35,8 +35,8 @@ const EmtView = () => {
     <div className="view-container emt-view">
       <div className="header">
         <h1>EMT RESPONDER DASHBOARD</h1>
-        <div className={`triage-banner ${incident.summary.priority}`}>
-          PRIORITY: {incident.summary.priority}
+        <div className={`triage-banner ${incident.summary?.priority || 'UNKNOWN'}`}>
+          PRIORITY: {incident.summary?.priority || 'UNKNOWN'}
         </div>
       </div>
 
@@ -44,7 +44,7 @@ const EmtView = () => {
         <div className="card medic-report">
           <h2>Medic Report</h2>
           <div className="report-content">
-            {incident.summary.report.split('\n').map((line: string, i: number) => (
+            {(incident.summary?.report || '').split('\n').map((line: string, i: number) => (
               <p key={i}>{line}</p>
             ))}
           </div>

@@ -30,10 +30,10 @@ PreSense is an emergency support module designed to bridge the care gap between 
 ## 🛠 Technical Configuration
 - **Backend Port:** 3001
 - **Frontend Port:** 5173 (with Proxy to 3001)
-- **Model:** Prepared for `gemini-1.5-pro`
+- **Model:** Live Integration with `gemini-2.5-flash` (with Mock AI fallback)
 
 ## 🚀 Future Roadmap
-1.  **AI Integration:** Switch from Mock AI to live Gemini API once the key is available.
+1.  **Context Optimization:** Further refine AI memory to handle complex medical histories.
 2.  **Termination Logic:** Detect when an assessment is "complete" and show a final instruction screen to the caller.
 3.  **Visual Polishing:** Enhance the "AI is thinking" states and add smoother transitions between questions.
 4.  **Field Validation:** Ensure the AI highlights life-threatening symptoms (Red Flags) specifically for the EMT.
